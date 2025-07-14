@@ -34,12 +34,22 @@ class Model:
             directory = self.modelsrc.joinpath(self.name)
         self.directory = common.verify_folder(directory)
 
-        studiomdl = self.bin.joinpath('studiomdl.exe')
-        quickmdl = self.bin.joinpath('quickmdl.exe')
+
+        # Gmod has 64bit, idk of other have it
+        win64 = self.bin / 'win64'
+
+        def tool_path(name):
+            if (win64 / name).exists():
+                return win64 / name
+            else:
+                return self.bin / name
+
+        studiomdl = tool_path('studiomdl.exe')
+        quickmdl = tool_path('quickmdl.exe')
         self.studiomdl = quickmdl if quickmdl.is_file() else studiomdl
 
-        hlvm = self.bin.joinpath('hlmv.exe')
-        hlvmplusplus = self.bin.joinpath('hlmvplusplus.exe')
+        hlvm = tool_path('hlmv.exe')
+        hlvmplusplus = tool_path('hlmvplusplus.exe')
         self.hlmv = hlvmplusplus if hlvmplusplus.is_file() else hlvm
 
         self.material_folder_items = model.material_folder_items
