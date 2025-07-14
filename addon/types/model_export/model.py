@@ -410,7 +410,7 @@ class Model:
         with os.popen(f'wine winepath -w "{path}"') as pipe:
             result = os.path.normpath(pipe.read().strip())
         
-        print(f'Converted path: {path} -> {result}')
+        #print(f'Converted path: {path} -> {result}')
         return (result)
 
     def view_model(self):
