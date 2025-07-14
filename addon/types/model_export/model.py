@@ -350,6 +350,16 @@ class Model:
         
         qc.close()
 
+    def winepath(self, path):
+        # Run winepath -w to convert the path to Windows format.
+        retunr_path = subprocess.run(
+            ['wine', 'winepath', '-w', str(path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        ).stdout.strip()
+        return retunr_path
+
     def compile_qc(self):
         qc = self.directory.joinpath(f'{self.stem}.qc')
         if qc.is_file():
@@ -358,16 +368,19 @@ class Model:
             self.remove_models_old()
 
             # Use wine to run StudioMDL on Linux.
-            # Wine tends to complain about the paths we feed StudioMDL.
-            # So we use relatve paths working from the base directory of the game.
+            # Just Assume that wine is in the system $PATH.
+
             if (os.name == 'posix') and (self.studiomdl.suffix == '.exe'):
                 cwd = self.game.parent
-                args = [str(self.wine), str(self.studiomdl.relative_to(cwd)), '-nop4', '-fullcollide',
-                        '-game', str(self.game.relative_to(cwd)), str(qc.relative_to(cwd))]
+                args = ['wine', str(self.winepath(self.studiomdl)), '-nop4', '-fullcollide',
+                        '-game', str(self.winepath(self.game)), str(self.winepath(qc))]
             else:
                 cwd = None
                 args = [str(self.studiomdl), '-nop4', '-fullcollide', '-game', str(self.game), str(qc)]
 
+            print('--' * 20)
+            print(f'Running: {args}')
+            print('--' * 20)
             pipe = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
 
             while True:
@@ -392,23 +405,30 @@ class Model:
         except:
             return self.report(f'Failed to open: {self.directory}', exception=True)
 
+    def winepath(self, path):
+        # Run winepath -w to convert the path to Windows format using os.popen.
+        with os.popen(f'wine winepath -w "{path}"') as pipe:
+            result = os.path.normpath(pipe.read().strip())
+        
+        print(f'Converted path: {path} -> {result}')
+        return (result)
+
     def view_model(self):
         model = self.models.joinpath(self.name)
         mdl = model.with_suffix('.mdl')
         dx90 = model.with_suffix('.dx90.vtx')
 
-        # Use wine to run HLMV on Linux.
-        # Wine tends to complain about the paths we feed HLMV.
-        # So we use relatve paths working from the base directory of the game.
+        # Use wine to run HLMV on Linux, using winepath for Windows paths.
         if (os.name == 'posix') and (self.studiomdl.suffix == '.exe'):
             cwd = self.game.parent
-            args = [str(self.wine), str(self.hlmv.relative_to(cwd)), '-game',
-                    str(self.game.relative_to(cwd)), str(mdl.relative_to(cwd))]
+            args = ['wine', str(self.winepath(self.hlmv)), '-game',
+                    str(self.winepath(self.game)), str(self.winepath(mdl))]
         else:
             cwd = None
             args = [str(self.hlmv), '-game', str(self.game), str(mdl)]
 
-        if dx90.is_file():
+        #if dx90.is_file():
+        if os.path.exists(mdl):
             print(f'Viewing: {mdl}')
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
         else:
